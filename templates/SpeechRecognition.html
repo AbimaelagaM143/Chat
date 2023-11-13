@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcripción de Voz a Texto y Texto a Voz</title>
+    <style>
+        /* Estilos para el botón */
+        #toggleBtn {
+            background-color: #4CAF50; /* Color verde */
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px; /* Bordes redondeados */
+            transition: background-color 0.3s; /* Animación al cambiar el color */
+        }
+        #toggleBtn:hover {
+            background-color: #45a049; /* Color verde oscuro al pasar el mouse */
+        }
+
+        /* Estilos para los cuadros de diálogo */
+        #transcript, #answer {
+            border: 2px solid #4CAF50; /* Borde verde */
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 5px; /* Bordes redondeados */
+            background-color: #f0fff0; /* Fondo ligeramente verde */
+        }
+    </style>
+</head>
+<body>
+
+<button id="toggleBtn">Iniciar </button>
+<p id="transcript"></p>
+<p id="answer"></p>
+
+<script>
+    const transcriptElem = document.getElementById('transcript');
+    const toggleBtn = document.getElementById('toggleBtn');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = 'es-ES';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    let isListening = false;
+
+    toggleBtn.addEventListener('click', () => {
+        if (isListening) {
+            recognition.stop();
+            toggleBtn.textContent = 'CHATEAR';
+        } else {
+            transcriptElem.textContent = '';  // Limpiar el contenido anterior
+            recognition.start();
+            toggleBtn.textContent = 'Deteniendo...';
+        }
+        isListening = !isListening;
+    });
+
+    recognition.addEventListener('result', (event) => {
+        const last = event.results.length - 1;
+        const text = event.results[last][0].transcript;
+        transcriptElem.textContent += text;
+    });
+
+    recognition.addEventListener('end', () => {
+        fetchAnswer(transcriptElem.textContent);
+    });
+
+    async function fetchAnswer(question) {
+        const response = await fetch('http://localhost:5000/ask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ question }),
+        });
+        const data = await response.json();
+        console.log(data);  // Log the data to the console
+        const answerElem = document.getElementById('answer');
+        answerElem.textContent = data.answer;  // Agrega esta línea para mostrar la respuesta en el HTML
+        speakAnswer(data.answer);
+    }
+
+    function speakAnswer(answer) {
+        const utterance = new SpeechSynthesisUtterance(answer);
+        utterance.lang = 'es-ES';
+        window.speechSynthesis.speak(utterance);
+    }
+</script>
+
+</body>
+</html>
